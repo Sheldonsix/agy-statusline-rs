@@ -125,38 +125,45 @@ fn main() {
         .current_dir(&cwd)
         .output()
     {
-        let mut branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if !branch.is_empty() {
-            // 截断过长的分支名称
-            let chars: Vec<char> = branch.chars().collect();
-            if chars.len() > 20 {
-                let keep = (20 - 3) / 2;
-                let p1: String = chars[..keep + 1].iter().collect();
-                let p2: String = chars[chars.len() - keep..].iter().collect();
-                branch = format!("{}...{}", p1, p2);
-            }
-
-            // 检查是否有更改
-            let mut dirty_star = "";
-            if let Ok(status_out) = Command::new("git")
-                .args(["status", "--porcelain"])
-                .current_dir(&cwd)
-                .output()
-            {
-                if !status_out.stdout.is_empty()
-                    && !String::from_utf8_lossy(&status_out.stdout)
-                        .trim()
-                        .is_empty()
-                {
-                    dirty_star = "*";
+        if !output.status.success() {
+            let err_msg = String::from_utf8_lossy(&output.stderr);
+            branch_display = format!(" \x1b[31m[Git Error:{}]\x1b[0m", err_msg.trim());
+        } else {
+            let mut branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !branch.is_empty() {
+                // 截断过长的分支名称
+                let chars: Vec<char> = branch.chars().collect();
+                if chars.len() > 20 {
+                    let keep = (20 - 3) / 2;
+                    let p1: String = chars[..keep + 1].iter().collect();
+                    let p2: String = chars[chars.len() - keep..].iter().collect();
+                    branch = format!("{}...{}", p1, p2);
                 }
-            }
 
-            branch_display = format!(
-                " \x1b[34m[🌿 {}\x1b[31m{}\x1b[34m]\x1b[0m",
-                branch, dirty_star
-            );
+                // 检查是否有更改
+                let mut dirty_star = "";
+                if let Ok(status_out) = Command::new("git")
+                    .args(["status", "--porcelain"])
+                    .current_dir(&cwd)
+                    .output()
+                {
+                    if !status_out.stdout.is_empty()
+                        && !String::from_utf8_lossy(&status_out.stdout)
+                            .trim()
+                            .is_empty()
+                    {
+                        dirty_star = "*";
+                    }
+                }
+
+                branch_display = format!(
+                    " \x1b[34m[🌿 {}\x1b[31m{}\x1b[34m]\x1b[0m",
+                    branch, dirty_star
+                );
+            }
         }
+    } else {
+        branch_display = " \x1b[31m[Git Command Not Found]\x1b[0m".to_string();
     }
 
     // 获取当前模型
