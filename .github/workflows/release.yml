@@ -1,0 +1,132 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  BIN_NAME: agy-statusline-rs
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run tests
+        run: cargo test --locked
+
+      - name: Run clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-24.04
+            archive: tar.gz
+            binary: agy-statusline-rs
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            archive: tar.gz
+            binary: agy-statusline-rs
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+            archive: tar.gz
+            binary: agy-statusline-rs
+          - target: aarch64-apple-darwin
+            os: macos-15
+            archive: tar.gz
+            binary: agy-statusline-rs
+          - target: x86_64-pc-windows-msvc
+            os: windows-2025
+            archive: zip
+            binary: agy-statusline-rs.exe
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package Unix archive
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact="${BIN_NAME}-${{ matrix.target }}"
+          mkdir -p "dist/${artifact}/examples"
+          cp "target/${{ matrix.target }}/release/${{ matrix.binary }}" "dist/${artifact}/${BIN_NAME}"
+          cp README.md "dist/${artifact}/README.md"
+          cp examples/config.json "dist/${artifact}/examples/config.json"
+          tar -czf "dist/${artifact}.tar.gz" -C "dist/${artifact}" .
+
+      - name: Package Windows archive
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $artifact = "${env:BIN_NAME}-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force "dist/$artifact/examples" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.binary }}" "dist/$artifact/${{ matrix.binary }}"
+          Copy-Item "README.md" "dist/$artifact/README.md"
+          Copy-Item "examples/config.json" "dist/$artifact/examples/config.json"
+          Compress-Archive -Path "dist/$artifact/*" -DestinationPath "dist/$artifact.zip" -Force
+
+      - name: Upload archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: agy-statusline-rs-${{ matrix.target }}
+          path: dist/agy-statusline-rs-${{ matrix.target }}.${{ matrix.archive }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download archives
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Prepare release files
+        run: |
+          set -euo pipefail
+          cp installer.sh release-artifacts/installer.sh
+          cp installer.ps1 release-artifacts/installer.ps1
+          cd release-artifacts
+          sha256sum * > SHA256SUMS
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+          generate_release_notes: true
