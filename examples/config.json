@@ -1,0 +1,29 @@
+{
+  "modules": {
+    "dir": {
+      "enabled": true,
+      "order": 10
+    },
+    "branch": {
+      "enabled": true,
+      "order": 20
+    },
+    "model": {
+      "enabled": true,
+      "order": 30
+    },
+    "tokens": {
+      "enabled": true,
+      "order": 40
+    },
+    "quota": {
+      "enabled": true,
+      "order": 50
+    }
+  },
+  "display": {
+    "color": "auto",
+    "icons": "auto",
+    "layout": "auto"
+  }
+}
