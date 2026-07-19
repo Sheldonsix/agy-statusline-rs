@@ -32,6 +32,8 @@ struct ContextWindow {
 struct QuotaInfo {
     #[serde(default)]
     remaining_fraction: f64,
+    #[serde(default)]
+    reset_in_seconds: i64,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -46,6 +48,10 @@ struct Payload {
     context_window: ContextWindow,
     #[serde(default)]
     quota: HashMap<String, QuotaInfo>,
+    #[serde(default)]
+    version: String,
+    #[serde(default)]
+    email: String,
 }
 
 /// 格式化 Token 数量
@@ -59,8 +65,37 @@ fn format_tokens(num: usize) -> String {
     }
 }
 
+// 格式化倒计时
+fn format_reset_time(sec: i64) -> String {
+    if sec <= 0 {
+        return String::new();
+    }
+
+    let days = sec / 86400;
+    let rem = sec % 86400;
+    let hours = rem / 3600;
+    let rem = rem % 3600;
+    let mins = rem / 60;
+
+    if days > 0 {
+        if hours > 0 {
+            format!("{}d {}h", days, hours)
+        } else {
+            format!("{}d", days)
+        }
+    } else if hours > 0 {
+        if mins > 0 {
+            format!("{}h {}m", hours, mins)
+        } else {
+            format!("{}h", hours)
+        }
+    } else {
+        format!("{}m", mins.max(1))
+    }
+}
+
 /// quota 进度条生成
-fn make_quota_badge(fraction: f64, label: &str) -> String {
+fn make_quota_badge(fraction: f64, label: &str, reset_sec: i64) -> String {
     if fraction < 0.0 {
         return String::new();
     }
@@ -78,14 +113,23 @@ fn make_quota_badge(fraction: f64, label: &str) -> String {
 
     let mut bar_str = String::new();
     for i in 0..total_bars {
-        if i < full_bars {
+        if i < full_bars + 1 {
             bar_str.push('■');
         } else {
             bar_str.push('□');
         }
     }
 
-    format!("{}{} {} {:.1}%\x1b[0m", color, label, bar_str, pct)
+    let reset_str = if reset_sec > 0 {
+        format!("({})", format_reset_time(reset_sec))
+    } else {
+        String::new()
+    };
+
+    format!(
+        "{}{} {} {:.1}%\x1b[0m{}",
+        color, label, bar_str, pct, reset_str
+    )
 }
 
 fn main() {
@@ -188,6 +232,8 @@ fn main() {
     // 获取 5h 和 weekly（7d）的剩余额度
     let mut quota_5h = -1.0;
     let mut quota_7d = -1.0;
+    let mut reset_sec_5h = 0;
+    let mut reset_sec_7d = 0;
 
     let (key_5h, key_7d) = if model_name.to_lowercase().contains("gemini") {
         // Gemini 模型
@@ -199,13 +245,15 @@ fn main() {
 
     if let Some(q) = payload.quota.get(key_5h) {
         quota_5h = q.remaining_fraction;
+        reset_sec_5h = q.reset_in_seconds;
     }
     if let Some(q) = payload.quota.get(key_7d) {
         quota_7d = q.remaining_fraction;
+        reset_sec_7d = q.reset_in_seconds;
     }
 
-    let q5h_str = make_quota_badge(quota_5h, "5h");
-    let q7d_str = make_quota_badge(quota_7d, "7d");
+    let q5h_str = make_quota_badge(quota_5h, "5h", reset_sec_5h);
+    let q7d_str = make_quota_badge(quota_7d, "7d", reset_sec_7d);
 
     let mut quota_block = "\x1b[32m⚡ Quota: N/A\x1b[0m".to_string();
     if !q5h_str.is_empty() || !q7d_str.is_empty() {
