@@ -22,15 +22,31 @@ irm https://github.com/Sheldonsix/agy-statusline-rs/releases/latest/download/ins
 ```
 *注：一键安装脚本会自动为你生成默认配置文件。*
 
-**Cargo 安装:**
+## 验证
+
+该工具通过标准输入 (`stdin`) 接收 JSON 数据进行渲染。你可以通过以下命令手动测试终端输出效果：
 ```bash
-cargo install agy-statusline-rs
+printf '{"cwd":"/tmp","model":{"display_name":"Gemini"}}' | agy-statusline-rs
 ```
-*(要求 Rust 1.85.0 及以上版本)*
 
-## Antigravity CLI 配置
+## 接入 Antigravity CLI
 
-安装完成后，将 Antigravity CLI 的 `statusline command` 设置为 `agy-statusline-rs`（Windows 下为 `agy-statusline-rs.exe`）。如果二进制文件不在环境变量 `PATH` 中，请填入它的绝对路径。
+安装完成后，你需要让 Antigravity CLI 知道去调用这个工具来渲染状态栏。主要有两种配置方式：
+
+**方式一：通过命令行界面设置（推荐）**
+在终端中进入 Antigravity CLI (`agy`)，输入 `/settings` 打开配置面板，找到 `statusLine` 配置项，将其中的 `command` 设置为刚刚安装的 `agy-statusline-rs`（Windows 下为 `agy-statusline-rs.exe`）。
+
+**方式二：手动修改配置文件**
+你也可以直接修改 Antigravity 的配置文件（通常位于 `~/.gemini/antigravity-cli/settings.json`），在其中加入或修改以下字段：
+
+```json
+{
+  "statusLine": {
+    "command": "agy-statusline-rs"
+  }
+}
+```
+*注：如果二进制文件没有被加入环境变量 `PATH`，这里请填写它的绝对路径。*
 
 ## 配置
 
