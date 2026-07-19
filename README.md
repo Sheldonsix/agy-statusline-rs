@@ -37,16 +37,17 @@ After installation, you need to configure Antigravity CLI to use this tool for r
 Open Antigravity CLI by typing `agy` in your terminal. Type `/settings` to open the configuration panel, find the `statusLine` setting, and set its `command` to `agy-statusline-rs` (`agy-statusline-rs.exe` on Windows).
 
 **Option 2: Edit `settings.json`**
-You can directly edit the Antigravity configuration file (typically located at `~/.gemini/antigravity-cli/settings.json`). Add or update the `statusLine` field:
+You can directly edit the Antigravity configuration file (typically located at `~/.gemini/antigravity-cli/settings.json` or `%USERPROFILE%\.gemini\antigravity-cli\settings.json` on Windows). Add or update the `statusLine` field:
 
 ```json
 {
   "statusLine": {
-    "command": "agy-statusline-rs"
+    "command": "agy-statusline-rs",
+    "enabled": true
   }
 }
 ```
-*Note: If the executable is not in your system `PATH`, provide the absolute path here.*
+*Note: On Windows, use `"agy-statusline-rs.exe"`. If the executable is not in your system `PATH`, provide the absolute path here.*
 
 ## Configuration
 

@@ -37,16 +37,17 @@ printf '{"cwd":"/tmp","model":{"display_name":"Gemini"}}' | agy-statusline-rs
 在终端中进入 Antigravity CLI (`agy`)，输入 `/settings` 打开配置面板，找到 `statusLine` 配置项，将其中的 `command` 设置为刚刚安装的 `agy-statusline-rs`（Windows 下为 `agy-statusline-rs.exe`）。
 
 **方式二：手动修改配置文件**
-你也可以直接修改 Antigravity 的配置文件（通常位于 `~/.gemini/antigravity-cli/settings.json`），在其中加入或修改以下字段：
+你也可以直接修改 Antigravity 的配置文件（通常位于 `~/.gemini/antigravity-cli/settings.json`，Windows 下位于 `%USERPROFILE%\.gemini\antigravity-cli\settings.json`），在其中加入或修改以下字段：
 
 ```json
 {
   "statusLine": {
-    "command": "agy-statusline-rs"
+    "command": "agy-statusline-rs",
+    "enabled": true
   }
 }
 ```
-*注：如果二进制文件没有被加入环境变量 `PATH`，这里请填写它的绝对路径。*
+*注：Windows 环境下请将命令写为 `"agy-statusline-rs.exe"`。如果二进制文件没有被加入环境变量 `PATH`，这里请填写它的绝对路径。*
 
 ## 配置
 
